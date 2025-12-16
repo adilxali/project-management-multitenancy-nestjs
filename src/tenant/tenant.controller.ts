@@ -1,4 +1,4 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, Delete } from '@nestjs/common';
 import { TenantService } from './tenant.service';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 
@@ -8,5 +8,9 @@ export class TenantController {
   @Post()
   async createTenant(@Body() createTenantDto: CreateTenantDto) {
     return this.tenantService.createTenant(createTenantDto);
+  }
+  @Delete()
+  async deleteAllTenants() {
+    return this.tenantService.deleteAllTenants();
   }
 }

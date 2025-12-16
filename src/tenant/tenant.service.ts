@@ -47,4 +47,11 @@ export class TenantService {
     });
     return !!tenant;
   }
+
+  async deleteAllTenants() {
+    await this.prisma.$transaction([
+      this.prisma.user.deleteMany(),
+      this.prisma.tenant.deleteMany(),
+    ]);
+  }
 }

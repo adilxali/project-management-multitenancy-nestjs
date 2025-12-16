@@ -15,8 +15,5 @@ export class CreateUserDto {
   password: string;
 
   @IsNotEmpty()
-  role: 'ADMIN' | 'USER';
-
-  @IsNotEmpty()
   tenantId: number;
 }
