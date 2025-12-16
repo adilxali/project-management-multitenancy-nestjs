@@ -1,0 +1,123 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Tenant {
+  id               BigInt           @id @default(autoincrement())
+  email            String           @unique
+  name             String
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  subscriptionPlan SubscriptionPlan @default(FREE)
+  comments         Comments[]
+  projects         Projects[]
+  tasks            Tasks[]
+  users            User[]
+
+  @@index([id, email, name])
+}
+
+model User {
+  id        BigInt     @id @default(autoincrement())
+  email     String     @unique
+  name      String
+  password  String
+  tenantId  BigInt
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  role      Role       @default(USER)
+  comments  Comments[]
+  tenant    Tenant     @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, id, name, email])
+}
+
+model Projects {
+  id          BigInt   @id @default(autoincrement())
+  name        String
+  tenantId    BigInt
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  tasks       Tasks[]
+
+  @@index([tenantId, id, name])
+}
+
+model Tasks {
+  id            BigInt        @id @default(autoincrement())
+  title         String
+  projectId     BigInt
+  tenantId      BigInt
+  status        TaskStatus    @default(PENDING)
+  assignedTo    String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  createdBy     String
+  comments      Comments[]
+  taskHistories TaskHistory[]
+  project       Projects      @relation(fields: [projectId], references: [id])
+  tenant        Tenant        @relation(fields: [tenantId], references: [id])
+
+  @@index([projectId, id, title, status, createdBy])
+}
+
+model Comments {
+  id        BigInt   @id @default(autoincrement())
+  taskId    BigInt
+  tenantId  BigInt
+  content   String
+  authorId  BigInt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  author    User     @relation(fields: [authorId], references: [id])
+  task      Tasks    @relation(fields: [taskId], references: [id])
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@index([taskId, authorId, id])
+}
+
+model TaskHistory {
+  id          BigInt          @id @default(autoincrement())
+  taskId      BigInt
+  historyType TaskHistoryType
+  oldStatus   TaskStatus
+  newStatus   TaskStatus
+  changedAt   DateTime        @default(now())
+  updatedBy   BigInt
+  task        Tasks           @relation(fields: [taskId], references: [id])
+
+  @@index([taskId, changedAt])
+}
+
+enum TaskStatus {
+  PENDING
+  TODO
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum SubscriptionPlan {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum TaskHistoryType {
+  STATUS_CHANGE
+  ASSIGNMENT_CHANGE
+  DETAIL_UPDATE
+}
