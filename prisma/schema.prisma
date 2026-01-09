@@ -28,6 +28,7 @@ model User {
   email     String     @unique
   name      String
   password  String
+  authToken String?     
   tenantId  BigInt
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt

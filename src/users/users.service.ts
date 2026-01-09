@@ -32,6 +32,24 @@ export class UsersService {
     return user;
   }
 
+  async getTenantUsers(tenantId: string) {
+    const users = await this.prisma.user.findMany({
+      where: {
+        tenantId: BigInt(tenantId),
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+      },
+    });
+    return users.map((user) => ({
+      ...user,
+      id: user.id.toString(),
+    }));
+  }
+
   private getTenantIdFromRequest(request: Request): number | null {
     const tenantId = request.headers['x-tenant-id'];
     if (tenantId && !Array.isArray(tenantId)) {

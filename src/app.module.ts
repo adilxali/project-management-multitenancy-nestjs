@@ -38,7 +38,6 @@ export class AppModule {
           path: '/',
           method: RequestMethod.GET,
         },
-
       )
       .forRoutes('/*');
   }

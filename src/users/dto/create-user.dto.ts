@@ -16,4 +16,6 @@ export class CreateUserDto {
 
   @IsNotEmpty()
   tenantId: number;
+
+  authToken?: string;
 }

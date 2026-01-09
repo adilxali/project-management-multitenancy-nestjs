@@ -25,19 +25,31 @@ export class AuthService {
       return { success: false, message: 'Invalid credentials' };
     }
 
-    const accessToken = this.jwtService.sign({
+    const authToken = await this.jwtService.signAsync({
       userEmail: user.email,
       userName: user.name,
       userRole: user.role,
       userId: user.id.toString(),
-      tenantId: user.tenantId.toString(),
+    });
+
+    await this.prisma.user.update({
+      where: { email },
+      data: {
+        authToken,
+      },
     });
 
     return {
       success: true,
       message: 'Login successful',
-      userId: user.id.toString(),
-      accessToken,
+      data: {
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        id: String(user.id),
+        tenant_id: String(user.tenantId),
+      },
+      authToken,
     };
   }
 }

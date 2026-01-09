@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateTenantDto } from './dto/create-tenant.dto';
-
+import * as bcrypt from 'bcrypt';
 @Injectable()
 export class TenantService {
   constructor(private prisma: PrismaService) {}
@@ -14,7 +14,14 @@ export class TenantService {
       });
 
       if (existingTenant) {
-        throw new Error('Tenant with this email already exists');
+        throw new HttpException(
+          {
+            code: HttpStatus.BAD_REQUEST,
+            message: 'Tenant with this email already exists',
+            success: false,
+          },
+          HttpStatus.BAD_REQUEST,
+        );
       }
       const tenant = await tx.tenant.create({
         data: {
@@ -22,6 +29,8 @@ export class TenantService {
           email,
         },
       });
+      const hashedPassword = await bcrypt.hash(createTenantDto.password, 10);
+      createTenantDto.password = hashedPassword;
       const createdUser = await tx.user.create({
         data: {
           ...createTenantDto,
