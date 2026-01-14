@@ -58,7 +58,7 @@ export class UsersService {
     return null;
   }
 
-  private chechTenantExists(tenantId: number): Promise<boolean> {
+  async chechTenantExists(tenantId: number): Promise<boolean> {
     return this.prisma.tenant
       .findUnique({ where: { id: tenantId } })
       .then((tenant) => !!tenant);
