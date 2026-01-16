@@ -9,5 +9,6 @@ import { UsersModule } from 'src/users/users.module';
   imports: [AuthModule, PrismaModule, UsersModule],
   providers: [ProjectsService],
   controllers: [ProjectsController],
+  exports: [ProjectsService],
 })
 export class ProjectsModule {}
