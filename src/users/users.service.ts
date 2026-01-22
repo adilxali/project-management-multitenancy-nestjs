@@ -50,6 +50,23 @@ export class UsersService {
     }));
   }
 
+  async getAuthUser(tenantId: string, authToken: string) {
+    const user = await this.prisma.user.findFirst({
+      where: {
+        authToken: authToken,
+        tenantId: BigInt(tenantId),
+      },
+    });
+    if (!user) {
+      return;
+    }
+    return {
+      ...user,
+      id: String(user.id),
+      tenantId: String(user.tenantId),
+    };
+  }
+
   private getTenantIdFromRequest(request: Request): number | null {
     const tenantId = request.headers['x-tenant-id'];
     if (tenantId && !Array.isArray(tenantId)) {

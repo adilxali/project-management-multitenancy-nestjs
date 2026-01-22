@@ -1,6 +1,6 @@
 import { IsNotEmpty, IsString, IsOptional } from 'class-validator';
 
-export class CreateTaskDto {
+export class CreateTaskBodyDto {
   @IsNotEmpty()
   @IsString()
   title: string;
@@ -9,11 +9,16 @@ export class CreateTaskDto {
   @IsString()
   projectId: string;
 
+  @IsOptional()
+  @IsString()
+  assignedTo?: string;
+}
+
+export class CreateTaskDto extends CreateTaskBodyDto {
   @IsNotEmpty()
   @IsString()
   createdBy: string;
 
-  @IsOptional()
   @IsString()
-  assignedTo?: string;
+  tenantId: string;
 }

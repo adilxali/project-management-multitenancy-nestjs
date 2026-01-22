@@ -9,7 +9,7 @@ export class ProjectsService {
   constructor(
     private prisma: PrismaService,
     private users: UsersService,
-  ) {}
+  ) { }
 
   async createProject(tenantId: number, project: CreateProjectDto) {
     const isTentantExist = await this.users.chechTenantExists(tenantId);
@@ -86,6 +86,7 @@ export class ProjectsService {
           success: false,
           message: 'Project not found',
           status: HttpStatus.NOT_FOUND,
+          err: err,
         },
         HttpStatus.NOT_FOUND,
       );

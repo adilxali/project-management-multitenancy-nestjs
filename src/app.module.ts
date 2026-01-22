@@ -35,7 +35,7 @@ export class AppModule {
           method: RequestMethod.POST,
         },
         {
-          path: '/auth/*',
+          path: '/auth/*path',
           method: RequestMethod.POST,
         },
         {
@@ -43,6 +43,6 @@ export class AppModule {
           method: RequestMethod.GET,
         },
       )
-      .forRoutes('/*');
+      .forRoutes('/*path');
   }
 }
