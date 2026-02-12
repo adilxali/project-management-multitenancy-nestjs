@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
@@ -51,6 +52,7 @@ export class TasksController {
   async updateTask(
     @Param('projectId') projectId: string,
     @Param('taskId') taskId: string,
+    @Token() token: string,
     @Tenant() tenantId: string,
     @Body() data: UpdateTaskBodyDto,
   ) {
@@ -58,7 +60,15 @@ export class TasksController {
       projectId,
       taskId,
       tenantId,
+      token,
       data,
     );
+  }
+  @Delete(':projectId/:taskId')
+  async deleteTask(
+    @Param('projectId') projectId: string,
+    @Param('taskId') taskId: string,
+  ) {
+    return await this.tasksService.deleteTask(projectId, taskId);
   }
 }

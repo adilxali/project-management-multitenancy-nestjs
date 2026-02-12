@@ -1,11 +1,15 @@
 import { IsNotEmpty, IsString, IsOptional } from 'class-validator';
 
 export class CreateTaskBodyDto {
-  @IsNotEmpty()
+  @IsNotEmpty({
+    message: 'Task title is required',
+  })
   @IsString()
   title: string;
 
-  @IsNotEmpty()
+  @IsNotEmpty({
+    message: 'Project id is required',
+  })
   @IsString()
   projectId: string;
 

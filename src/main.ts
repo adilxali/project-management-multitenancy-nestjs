@@ -2,9 +2,16 @@ import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
+import { PrismaExceptionFilter } from './common/errorHandles/prisma-exception.filter';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.useGlobalPipes(new ValidationPipe());
+  app.enableCors({
+    origin: '*',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true,
+  });
+  // app.useGlobalFilters(new PrismaExceptionFilter());
   const config = new DocumentBuilder()
     .setTitle('Project Management System Rest Api')
     .setDescription('Project Management System API description')

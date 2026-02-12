@@ -35,7 +35,8 @@ model User {
   role      Role       @default(USER)
   comments  Comments[]
   tenant    Tenant     @relation(fields: [tenantId], references: [id])
-
+  
+  @@unique([tenantId, authToken])
   @@index([tenantId, id, name, email])
 }
 
@@ -49,6 +50,7 @@ model Projects {
   tenant      Tenant   @relation(fields: [tenantId], references: [id])
   tasks       Tasks[]
 
+  @@unique([name, tenantId])
   @@index([tenantId, id, name])
 }
 
@@ -67,6 +69,7 @@ model Tasks {
   project       Projects      @relation(fields: [projectId], references: [id])
   tenant        Tenant        @relation(fields: [tenantId], references: [id])
 
+  @@unique([projectId, title])
   @@index([projectId, id, title, status, createdBy])
 }
 

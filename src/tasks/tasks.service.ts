@@ -8,7 +8,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { ProjectsService } from 'src/projects/projects.service';
 import { UpdateTaskBodyDto } from './dto/update-task.dto';
-
+import { Prisma } from 'generated/prisma/client';
 @Injectable()
 export class TasksService {
   constructor(
@@ -18,8 +18,8 @@ export class TasksService {
 
   async createTask(createTaskDetails: CreateTaskDto) {
     const { projectId, tenantId } = createTaskDetails;
-    return await this.prisma.$transaction(async (txn) => {
-      const isProjectExist = await txn.projects.findUnique({
+    return this.prisma.$transaction(async (txn) => {
+      const isProjectExist = await txn.projects.findUniqueOrThrow({
         where: { id: BigInt(projectId), tenantId: BigInt(tenantId) },
       });
       if (!isProjectExist) {
@@ -50,118 +50,165 @@ export class TasksService {
   }
 
   async projectAllTasks(projectId: string, tenantId: string) {
-    return await this.prisma.$transaction(async (txn) => {
-      const isProjectExist = await txn.tasks.findUnique({
-        where: { id: BigInt(projectId), tenantId: BigInt(tenantId) },
-      });
-      if (!isProjectExist) {
-        throw new HttpException(
-          {
-            code: HttpStatus.NOT_FOUND,
-            message: 'Project Not Found',
-            success: false,
-          },
-          HttpStatus.NOT_FOUND,
-        );
-      }
-      return (
-        await txn.tasks.findMany({
-          where: {
-            projectId: BigInt(projectId),
-            tenantId: BigInt(tenantId),
-          },
-        })
-      ).map((task) => ({
-        ...task,
-        id: String(task.id),
-        tenantId: String(task.tenantId),
-        projectId: String(task.projectId),
-      }));
+    const isProjectExist = await this.projectsService.getProjectById(
+      tenantId,
+      projectId,
+    );
+    if (!isProjectExist) {
+      throw new HttpException(
+        {
+          code: HttpStatus.NOT_FOUND,
+          message: 'Project Not Found',
+          success: false,
+        },
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    const projectTasks = await this.prisma.tasks.findMany({
+      where: { projectId: BigInt(projectId), tenantId: BigInt(tenantId) },
     });
+    const formattedData = projectTasks.map((task) => ({
+      ...task,
+      id: String(task.id),
+      tenantId: String(task.tenantId),
+      projectId: String(task.projectId),
+    }));
+    return {
+      success: true,
+      message: 'Tasks fetched successfully',
+      data: formattedData,
+    };
   }
   async updateTask(
     projectId: string,
     taskId: string,
     tenantId: string,
+    token: string,
     data: UpdateTaskBodyDto,
   ) {
-    // await this.projectsService.getProjectById(tenantId, projectId);
+    const tenantIdBI = BigInt(tenantId);
+    const projectIdBI = BigInt(projectId);
+    const taskIdBI = BigInt(taskId);
 
-    // const [updateResult, updatedTask] = await this.prisma.$transaction([
-    //   this.prisma.tasks.updateMany({
-    //     where: {
-    //       id: BigInt(taskId),
-    //       projectId: BigInt(projectId),
-    //       tenantId: BigInt(tenantId),
-    //     },
-    //     data,
-    //   }),
+    return this.prisma.$transaction(async (txn) => {
+      const [user, project] = await Promise.all([
+        txn.user.findUnique({
+          where: {
+            tenantId_authToken: {
+              tenantId: tenantIdBI,
+              authToken: token,
+            },
+          },
+        }),
+        txn.projects.findUnique({
+          where: {
+            id: projectIdBI,
+            tenantId: tenantIdBI,
+          },
+        }),
+      ]);
 
-    //   this.prisma.tasks.findFirst({
-    //     where: {
-    //       id: BigInt(taskId),
-    //       projectId: BigInt(projectId),
-    //       tenantId: BigInt(tenantId),
-    //     },
-    //   }),
-    // ]);
-
-    // if (updateResult.count === 0 || !updatedTask) {
-    //   throw new NotFoundException({
-    //     success: false,
-    //     message: 'Task not found or access denied',
-    //   });
-    // }
-
-    // return {
-    //   data: {
-    //     ...updatedTask,
-    //     id: String(updatedTask.id),
-    //     projectId: String(updatedTask.projectId),
-    //     tenantId: String(updatedTask.tenantId),
-    //   },
-    //   success: true,
-    //   message: 'Task updated successfully',
-    // };
-    return await this.prisma.$transaction(async (txn) => {
-      const isProjectExist = await txn.projects.findUnique({
-        where: {
-          id: BigInt(projectId),
-          tenantId: BigInt(tenantId),
-        },
-      });
-      if (!isProjectExist) {
+      if (!user) {
         throw new NotFoundException({
           success: false,
-          message: 'Project  not found',
+          message: 'User not found',
         });
       }
-      const exitingTaskDetails = await txn.tasks.findUnique({
-        where: {
-          id: BigInt(taskId),
-        },
-      });
-      if (!exitingTaskDetails) {
+
+      if (!project) {
         throw new NotFoundException({
           success: false,
-          message: 'Task not found.',
+          message: 'Project not found',
+        });
+      }
+      const existingTask = await txn.tasks.findUnique({
+        where: { id: taskIdBI },
+      });
+
+      if (!existingTask) {
+        throw new NotFoundException({
+          success: false,
+          message: 'Task not found',
         });
       }
       const updatedTask = await txn.tasks.update({
-        where: {
-          id: BigInt(taskId),
-        },
+        where: { id: taskIdBI },
         data,
       });
+      const historyEntries: Prisma.TaskHistoryCreateManyInput[] = [];
+
+      const baseHistory = {
+        taskId: existingTask.id,
+        projectId: projectIdBI,
+        tenantId: tenantIdBI,
+        updatedBy: user.id,
+        oldStatus: existingTask.status,
+        newStatus: updatedTask.status,
+      };
+
+      if (data.status && data.status !== existingTask.status) {
+        historyEntries.push({
+          ...baseHistory,
+          historyType: 'STATUS_CHANGE',
+        });
+      }
+
+      if (
+        data.assignedTo !== undefined &&
+        data.assignedTo !== existingTask.assignedTo
+      ) {
+        historyEntries.push({
+          ...baseHistory,
+          historyType: 'ASSIGNMENT_CHANGE',
+        });
+      }
+
+      if (data.title && data.title !== existingTask.title) {
+        historyEntries.push({
+          ...baseHistory,
+          historyType: 'DETAIL_UPDATE',
+        });
+      }
+
+      if (historyEntries.length) {
+        await txn.taskHistory.createMany({ data: historyEntries });
+      }
       return {
+        success: true,
+        message: 'Task updated successfully',
         data: {
           ...updatedTask,
           id: String(updatedTask.id),
           projectId: String(updatedTask.projectId),
           tenantId: String(updatedTask.tenantId),
         },
+      };
+    });
+  }
+
+  async deleteTask(projectId: string, taskId: string) {
+    return this.prisma.$transaction(async (txn) => {
+      const existingTask = await txn.tasks.findUnique({
+        where: { id: BigInt(taskId), projectId: BigInt(projectId) },
+      });
+      if (!existingTask) {
+        throw new NotFoundException({
+          success: false,
+          message: 'Task not found',
+        });
+      }
+      const deleteTask = await txn.tasks.delete({
+        where: { id: BigInt(taskId), projectId: BigInt(projectId) },
+      });
+      return {
         success: true,
-        message: 'Task updated successfully',
+        message: 'Task deleted successfully',
+        data: {
+          ...deleteTask,
+          id: String(deleteTask.id),
+          projectId: String(deleteTask.projectId),
+          tenantId: String(deleteTask.tenantId),
+        },
       };
     });
   }
