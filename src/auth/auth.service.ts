@@ -57,13 +57,15 @@ export class AuthService {
       success: true,
       message: 'Login successful',
       data: {
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        id: String(user.id),
+        user: {
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          id: String(user.id),
+        },
         tenant: { ...user.tenant, id: String(user.tenant.id) },
+        authToken,
       },
-      authToken,
     };
   }
 }
